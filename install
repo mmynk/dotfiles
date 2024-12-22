@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+set -x
+set -e
+
+install_nix() {
+    # Install nix if it's not already installed
+    if ! command -v nix > /dev/null; then
+        sh <(curl -L https://nixos.org/nix/install) --daemon
+    fi
+}
+
+safe_copy() {
+    # if [ ! -f $2 ]; then
+    #     cp $1 $2
+    # fi
+    cp $1 $2
+}
+
+replace_string() {
+    # sed -i "s/<username>/$USER/g" $1
+    sed -i "s|$1|$2|g" $3
+}
+
+replace_user() {
+    replace_string "<username>" "$USER" $1
+}
+
+install_linux() {
+    install_nix
+
+    # Create nix config directories
+    mkdir -p ~/.config/nix/home-manager/apps
+
+    replace_string "<pwd>" "$(pwd)" ./linux/home.nix
+
+    # Copy the nix configuration files if they don't exist
+    safe_copy ./linux/flake.nix ~/.config/nix/flake.nix
+    safe_copy ./linux/home.nix ~/.config/nix/home-manager/home.nix
+
+    # Replace the username in the nix configuration files
+    replace_user ~/.config/nix/flake.nix
+    replace_user ~/.config/nix/home-manager/home.nix
+
+    # Build the home-manager configuration
+    nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
+}
+
+# Check OS and call the appropriate script
+case "$(uname -s)" in
+    Linux*)     install_linux ;;
+    Darwin*)    install_mac ;;
+    *)          echo "Unsupported OS: $(uname -s)" ;;
+esac
+
+echo "Installation complete"

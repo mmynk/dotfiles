@@ -4,3 +4,7 @@ source $VIMRUNTIME/defaults.vim
 set number
 syntax on
 set backspace=indent,eol,start
+
+set nocompatible              " be iMproved, required
+filetype off                  " required
+
