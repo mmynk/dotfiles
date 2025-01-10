@@ -35,6 +35,7 @@ install_linux() {
     replace_string "<pwd>" "$(pwd)" ./linux/home.nix
 
     # Copy the nix configuration files if they don't exist
+    safe_copy ./nix.conf ~/.config/nix/nix.conf
     safe_copy ./linux/flake.nix ~/.config/nix/flake.nix
     safe_copy ./linux/home.nix ~/.config/nix/home-manager/home.nix
 
