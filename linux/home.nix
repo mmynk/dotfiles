@@ -7,7 +7,8 @@
   home.packages = with pkgs; [
     bat
     fzf
-    gh
+    git
+    gitAndTools.gh
     go
     oh-my-zsh
     python3
@@ -39,6 +40,16 @@
     enable = true;
     userName = "mmynk";
     userEmail = "mohit.ritanil@gmail.com";
+
+    extraConfig = {
+      credential = {
+        helper = "${pkgs.gitAndTools.gh}/bin/gh auth git-credential";
+      };
+    };
+  };
+
+  programs.gh = {
+    enable = true;
   };
 
   programs.neovim = {
