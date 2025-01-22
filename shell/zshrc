@@ -108,6 +108,7 @@ export VISUAL="nvim"
 export EDITOR="nvim"
 
 # custom imports
-[ -f ~/.alias ] && source ~/.aliases
+[ -f ~/.aliases ] && source ~/.aliases
+[ -f ~/.avx ] && source ~/.avx
 source <(fzf --zsh)
 eval "$(zoxide init --cmd cd zsh)"

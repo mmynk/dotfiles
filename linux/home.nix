@@ -23,6 +23,10 @@
     source = config.lib.file.mkOutOfStoreSymlink /home/mmayank/dev/dotfiles/shell/aliases.sh;
   };
 
+  home.file.".avx" = {
+    source = config.lib.file.mkOutOfStoreSymlink /home/mmayank/dev/dotfiles/shell/avx.sh;
+  };
+
   home.file.".oh-my-zsh/themes/custom-rr.zsh-theme" = {
     source = config.lib.file.mkOutOfStoreSymlink /home/mmayank/dev/dotfiles/shell/custom-rr.zsh-theme;
   };
