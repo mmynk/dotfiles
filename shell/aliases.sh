@@ -1,6 +1,6 @@
 alias bat=cat
 alias cat="batcat -p --theme=ansi"
-alias v=nvim
+alias vi=nvim
 
 nix_update() {
   cd ~/.config/nix
@@ -10,6 +10,11 @@ nix_update() {
 }
 
 nix_rebuild() {
-  nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
-  echo "nix home-manager rebuild done..."
+  # For Linux
+  # nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
+  # echo "nix home-manager rebuild done..."
+
+  # For macOS
+  sudo darwin-rebuild switch --flake ~/.config/nix#${USER}
+  echo "nix darwin-rebuild done..."
 }

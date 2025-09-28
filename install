@@ -75,12 +75,12 @@ install_mac() {
 
     # Replace placeholder strings in the copied configuration files
     replace_user ~/.config/nix/flake.nix
-    
+
     # Install nix darwin
-    nix run nix-darwin/master#darwin-rebuild -- switch --flake ~/.config/nix#$USER
+    sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ~/.config/nix#$USER
 
     # Build the configuration using nix-darwin
-    darwin-rebuild switch --flake ~/.config/nix#$USER
+    sudo darwin-rebuild switch --flake ~/.config/nix#$USER
 }
 
 # Check OS and call the appropriate script
