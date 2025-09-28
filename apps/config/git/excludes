@@ -1,0 +1,17 @@
+# MacOS
+.DS_Store
+
+# IDEs
+*.iml
+.idea/
+.vscode
+
+# Builds
+build
+
+# AI
+memory-bank
+.clinerules
+.clineignore
+.rooignore
+wasabi-toolbag/
