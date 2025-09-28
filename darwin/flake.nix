@@ -88,14 +88,14 @@
   in
   {
     # Build darwin flake using:
-    # $ darwin-rebuild build --flake .#Mohits-MacBook-Pro
-    darwinConfigurations."Mohits-MacBook-Pro" = nix-darwin.lib.darwinSystem {
+    # $ darwin-rebuild build --flake .#<username>
+    darwinConfigurations."<username>" = nix-darwin.lib.darwinSystem {
       modules = [
         configuration
       ];
     };
 
     # Expose the package set, including overlays, for convenience.
-    darwinPackages = self.darwinConfigurations."Mohits-MacBook-Pro".pkgs;
+    darwinPackages = self.darwinConfigurations."<username>".pkgs;
   };
 }
