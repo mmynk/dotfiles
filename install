@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 
-set -x
-set -e
+set -ex
+
+OS_TYPE=$(uname -s)
+
+# Set the appropriate sed function based on OS
+if [[ "$OS_TYPE" == "Darwin" ]]; then
+    sed_cmd() { sed -i '' "s|$1|$2|g" "$3"; }
+else
+    # Default to Linux-style sed
+    sed_cmd() { sed -i "s|$1|$2|g" "$3"; }
+fi
+
+replace_string() {
+    sed_cmd "$1" "$2" "$3"
+}
 
 install_nix() {
     # Install nix if it's not already installed
@@ -11,19 +24,23 @@ install_nix() {
 }
 
 safe_copy() {
-    # if [ ! -f $2 ]; then
-    #     cp $1 $2
-    # fi
-    cp $1 $2
+    # Only copy if the destination file doesn't exist
+    if [ ! -f "$2" ]; then
+        cp "$1" "$2"
+    fi
 }
 
 replace_string() {
-    # sed -i "s/<username>/$USER/g" $1
-    sed -i "s|$1|$2|g" $3
+    # Use the appropriate sed function based on the OS
+    case "$(uname -s)" in
+        Linux*)     sed_cmd "$1" "$2" "$3" ;;
+        Darwin*)    sed_cmd "$1" "$2" "$3" ;;
+        *)          echo "Unsupported OS for replace_string: $(uname -s)" ;;
+    esac
 }
 
 replace_user() {
-    replace_string "<username>" "$USER" $1
+    replace_string "<username>" "$USER" "$1"
 }
 
 install_linux() {
@@ -32,14 +49,13 @@ install_linux() {
     # Create nix config directories
     mkdir -p ~/.config/nix/home-manager/apps
 
-    replace_string "<pwd>" "$(pwd)" ./linux/home.nix
-
-    # Copy the nix configuration files if they don't exist
+    # Copy the nix configuration files
     safe_copy ./nix.conf ~/.config/nix/nix.conf
     safe_copy ./linux/flake.nix ~/.config/nix/flake.nix
     safe_copy ./linux/home.nix ~/.config/nix/home-manager/home.nix
 
-    # Replace the username in the nix configuration files
+    # Replace placeholder strings in the copied configuration files
+    replace_string "<pwd>" "$(pwd)" ~/.config/nix/home-manager/home.nix
     replace_user ~/.config/nix/flake.nix
     replace_user ~/.config/nix/home-manager/home.nix
 
@@ -47,8 +63,28 @@ install_linux() {
     nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
 }
 
+install_mac() {
+    install_nix
+
+    # Create nix config directories
+    mkdir -p ~/.config/nix
+
+    # Copy the nix configuration files
+    safe_copy ./nix.conf ~/.config/nix/nix.conf
+    safe_copy ./darwin/flake.nix ~/.config/nix/flake.nix
+
+    # Replace placeholder strings in the copied configuration files
+    replace_user ~/.config/nix/flake.nix
+    
+    # Install nix darwin
+    nix run nix-darwin/master#darwin-rebuild -- switch --flake ~/.config/nix#$USER
+
+    # Build the configuration using nix-darwin
+    darwin-rebuild switch --flake ~/.config/nix#$USER
+}
+
 # Check OS and call the appropriate script
-case "$(uname -s)" in
+case "$OS_TYPE" in
     Linux*)     install_linux ;;
     Darwin*)    install_mac ;;
     *)          echo "Unsupported OS: $(uname -s)" ;;
