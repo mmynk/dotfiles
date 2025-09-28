@@ -1,0 +1,6 @@
+[user]
+	name = Mohit Mayank
+	email = momynk@amazon.com
+
+[includeIf "gitdir://~/dev"]
+    path = ~/dev/.gitconfig
