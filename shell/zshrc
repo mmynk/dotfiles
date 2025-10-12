@@ -106,6 +106,7 @@ source $ZSH/oh-my-zsh.sh
 
 export VISUAL="nvim"
 export EDITOR="nvim"
+export PAGER="bat --paging=always"
 
 # custom imports
 [ -f ~/.alias ] && source ~/.aliases
