@@ -1,5 +1,7 @@
 alias cat="bat -p --theme=ansi"
 alias vi=nvim
+alias ls=eza
+alias l='ls -l --icons=auto'
 
 nix_update() {
   cd ~/.config/nix
