@@ -13,8 +13,7 @@
     home-manager,
     ...
   }: let
-    # system = "aarch64-linux"; If you are running on ARM powered computer
-    system = "x86_64-linux";
+    system = builtins.currentSystem;
     pkgs = nixpkgs.legacyPackages.${system};
   in {
     homeConfigurations = {
