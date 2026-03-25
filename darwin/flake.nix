@@ -15,12 +15,17 @@
       environment.systemPackages = with pkgs; [
         bat
         eza
+        fd
+        fish
         fzf
+        less
         neovim
         python3
         ripgrep
         starship
         tmux
+        trash-cli
+        tree
         zoxide
       ];
 
@@ -32,8 +37,7 @@
       nix.settings.experimental-features = "nix-command flakes";
 
       # Enable alternative shell support in nix-darwin.
-      # programs.fish.enable = true;
-      programs.zsh.enable = true;
+      programs.fish.enable = true;
 
       # Set Git commit hash for darwin-version.
       system.configurationRevision = self.rev or self.dirtyRev or null;
