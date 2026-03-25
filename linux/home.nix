@@ -8,8 +8,8 @@
     bat
     eza
     fd
-    fish
     fzf
+    glow
     less
     mosh
     neovim
@@ -19,6 +19,8 @@
     tree
     zoxide
   ];
+
+  programs.fish.enable = true;
 
   home.file.".config/fish/config.fish" = {
     source = config.lib.file.mkOutOfStoreSymlink <pwd>/shell/config.fish;

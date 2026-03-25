@@ -16,8 +16,8 @@
         bat
         eza
         fd
-        fish
         fzf
+        glow
         less
         neovim
         python3
@@ -38,6 +38,7 @@
 
       # Enable alternative shell support in nix-darwin.
       programs.fish.enable = true;
+      users.users."<username>".shell = pkgs.fish;
 
       # Set Git commit hash for darwin-version.
       system.configurationRevision = self.rev or self.dirtyRev or null;
