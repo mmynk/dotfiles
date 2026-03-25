@@ -1,5 +1,5 @@
-alias bat=cat
-alias cat="batcat -p --theme=ansi"
+alias bat="command cat"
+alias cat="command bat -p --theme=ansi"
 alias vi=nvim
 
 nix_update() {
