@@ -16,6 +16,7 @@
     ripgrep
     starship
     trash-cli
+    tree
     zoxide
   ];
 
