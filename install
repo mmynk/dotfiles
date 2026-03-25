@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 OS_TYPE=$(uname -s)
 
@@ -8,7 +8,6 @@ OS_TYPE=$(uname -s)
 if [[ "$OS_TYPE" == "Darwin" ]]; then
     sed_cmd() { sed -i '' "s|$1|$2|g" "$3"; }
 else
-    # Default to Linux-style sed
     sed_cmd() { sed -i "s|$1|$2|g" "$3"; }
 fi
 
@@ -16,78 +15,102 @@ replace_string() {
     sed_cmd "$1" "$2" "$3"
 }
 
-install_nix() {
-    # Install nix if it's not already installed
-    if ! command -v nix > /dev/null; then
-        sh <(curl -L https://nixos.org/nix/install) --daemon
-    fi
+replace_user() {
+    replace_string "<username>" "$USER" "$1"
 }
 
 safe_copy() {
-    # Only copy if the destination file doesn't exist
     if [ ! -f "$2" ]; then
         cp "$1" "$2"
     fi
 }
 
-replace_string() {
-    # Use the appropriate sed function based on the OS
-    case "$(uname -s)" in
-        Linux*)     sed_cmd "$1" "$2" "$3" ;;
-        Darwin*)    sed_cmd "$1" "$2" "$3" ;;
-        *)          echo "Unsupported OS for replace_string: $(uname -s)" ;;
+install_nix() {
+    if command -v nix > /dev/null; then
+        echo "nix already installed, skipping..."
+    else
+        echo "Installing nix..."
+        sh <(curl -L https://nixos.org/nix/install) --daemon
+    fi
+}
+
+setup_fish() {
+    echo "Setting up fish..."
+
+    # Install fisher if not present
+    if [ ! -f ~/.config/fish/functions/fisher.fish ]; then
+        echo "Installing fisher..."
+        fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
+    fi
+
+    # Install fish plugins
+    echo "Installing fish plugins..."
+    fish -c "fisher install PatrickF1/fzf.fish" 2>/dev/null || true
+
+    # Seed extra_aliases from OS-specific template
+    case "$OS_TYPE" in
+        Linux*)     safe_copy ./shell/extra_aliases_linux.fish ~/.extra_aliases.fish ;;
+        Darwin*)    safe_copy ./shell/extra_aliases_darwin.fish ~/.extra_aliases.fish ;;
     esac
 }
 
-replace_user() {
-    replace_string "<username>" "$USER" "$1"
+setup_tmux() {
+    echo "Setting up tmux..."
+    mkdir -p ~/.config/tmux
+    safe_copy ./config/tmux.conf ~/.config/tmux/tmux.conf
+
+    # Install TPM if not present
+    if [ ! -d ~/.tmux/plugins/tpm ]; then
+        echo "Installing TPM..."
+        git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+    fi
 }
 
 install_linux() {
     install_nix
 
-    # Create nix config directories
-    mkdir -p ~/.config/nix/home-manager/apps
+    echo "Setting up nix home-manager..."
+    mkdir -p ~/.config/nix/home-manager
 
-    # Copy the nix configuration files
     safe_copy ./nix.conf ~/.config/nix/nix.conf
     safe_copy ./linux/flake.nix ~/.config/nix/flake.nix
     safe_copy ./linux/home.nix ~/.config/nix/home-manager/home.nix
 
-    # Replace placeholder strings in the copied configuration files
     replace_string "<pwd>" "$(pwd)" ~/.config/nix/home-manager/home.nix
     replace_user ~/.config/nix/flake.nix
     replace_user ~/.config/nix/home-manager/home.nix
 
-    # Build the home-manager configuration
+    echo "Building home-manager configuration..."
     nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
+
+    setup_fish
+    setup_tmux
 }
 
 install_mac() {
     install_nix
 
-    # Create nix config directories
+    echo "Setting up nix-darwin..."
     mkdir -p ~/.config/nix
 
-    # Copy the nix configuration files
     safe_copy ./nix.conf ~/.config/nix/nix.conf
     safe_copy ./darwin/flake.nix ~/.config/nix/flake.nix
 
-    # Replace placeholder strings in the copied configuration files
     replace_user ~/.config/nix/flake.nix
 
-    # Install nix darwin
+    echo "Building darwin configuration..."
     sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ~/.config/nix#$USER
 
-    # Build the configuration using nix-darwin
-    sudo darwin-rebuild switch --flake ~/.config/nix#$USER
+    setup_fish
+    setup_tmux
 }
 
-# Check OS and call the appropriate script
 case "$OS_TYPE" in
     Linux*)     install_linux ;;
     Darwin*)    install_mac ;;
-    *)          echo "Unsupported OS: $(uname -s)" ;;
+    *)          echo "Unsupported OS: $OS_TYPE" ;;
 esac
 
-echo "Installation complete"
+echo ""
+echo "Installation complete!"
+echo "Open tmux and press prefix + I to install tmux plugins."
