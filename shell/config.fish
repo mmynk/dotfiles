@@ -1,3 +1,8 @@
+# Homebrew (macOS)
+if test -f /opt/homebrew/bin/brew
+    /opt/homebrew/bin/brew shellenv | source
+end
+
 # Env vars
 set -gx VISUAL nvim
 set -gx EDITOR nvim
