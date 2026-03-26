@@ -132,3 +132,7 @@ esac
 echo ""
 echo "Installation complete!"
 echo "Open tmux and press prefix + I to install tmux plugins."
+echo ""
+echo "If fish is not your default shell:"
+echo "  echo \$(which fish) | sudo tee -a /etc/shells"
+echo "  chsh -s \$(which fish)"
