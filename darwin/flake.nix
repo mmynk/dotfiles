@@ -47,6 +47,24 @@
       # $ darwin-rebuild changelog
       system.stateVersion = 6;
 
+      # Daily auto-update: update flake inputs, rebuild, and gc
+      launchd.daemons.nix-auto-update = {
+        script = ''
+          export PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH
+          OWNER=$(stat -f '%Su' /dev/console)
+          FLAKE_DIR="/Users/$OWNER/.config/nix"
+          cd "$FLAKE_DIR"
+          nix flake update 2>&1
+          darwin-rebuild switch --flake ".#$OWNER" 2>&1
+          nix store gc 2>&1
+        '';
+        serviceConfig = {
+          StartCalendarInterval = [{ Hour = 3; Minute = 0; }];
+          StandardOutPath = "/tmp/nix-auto-update.log";
+          StandardErrorPath = "/tmp/nix-auto-update.err.log";
+        };
+      };
+
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
     };
