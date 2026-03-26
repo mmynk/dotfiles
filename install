@@ -55,16 +55,35 @@ setup_fish() {
     esac
 }
 
+setup_nvim() {
+    echo "Setting up nvim..."
+    ln -sf "$(pwd)/config/nvim" ~/.config/nvim
+}
+
 setup_tmux() {
     echo "Setting up tmux..."
     mkdir -p ~/.config/tmux
-    safe_copy ./config/tmux.conf ~/.config/tmux/tmux.conf
+    ln -sf "$(pwd)/config/tmux.conf" ~/.config/tmux/tmux.conf
 
     # Install TPM if not present
     if [ ! -d ~/.tmux/plugins/tpm ]; then
         echo "Installing TPM..."
         git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
     fi
+}
+
+setup_git() {
+    echo "Setting up git..."
+    mkdir -p ~/.config/git
+    ln -sf "$(pwd)/config/git/config" ~/.config/git/config
+    ln -sf "$(pwd)/config/git/excludes" ~/.config/git/excludes
+}
+
+setup_common() {
+    setup_fish
+    setup_nvim
+    setup_tmux
+    setup_git
 }
 
 install_linux() {
@@ -84,8 +103,7 @@ install_linux() {
     echo "Building home-manager configuration..."
     nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
 
-    setup_fish
-    setup_tmux
+    setup_common
 }
 
 install_mac() {
@@ -102,8 +120,7 @@ install_mac() {
     echo "Building darwin configuration..."
     sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ~/.config/nix#$USER
 
-    setup_fish
-    setup_tmux
+    setup_common
 }
 
 case "$OS_TYPE" in
