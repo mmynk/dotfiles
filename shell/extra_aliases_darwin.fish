@@ -1,7 +1,7 @@
 function nix_update
-    pushd ~/.config/nix
+    cd ~/.config/nix
     nix flake update && echo "nix flake update done..."
-    popd
+    cd -
 end
 
 alias nix_gc='nix store gc && echo "nix store gc done..."'
