@@ -19,6 +19,15 @@ replace_user() {
     replace_string "<username>" "$USER" "$1"
 }
 
+replace_system() {
+    # Resolve the nix system string (e.g. aarch64-linux, x86_64-linux) at install
+    # time. builtins.currentSystem is impure, so it cannot live inside the flake —
+    # we detect it here and substitute the <system> placeholder.
+    local sys
+    sys=$(nix eval --impure --raw --expr 'builtins.currentSystem')
+    replace_string "<system>" "$sys" "$1"
+}
+
 safe_copy() {
     if [ ! -f "$2" ]; then
         cp "$1" "$2"
@@ -99,6 +108,7 @@ install_linux() {
     replace_string "<pwd>" "$(pwd)" ~/.config/nix/home-manager/home.nix
     replace_user ~/.config/nix/flake.nix
     replace_user ~/.config/nix/home-manager/home.nix
+    replace_system ~/.config/nix/flake.nix
 
     echo "Building home-manager configuration..."
     nix run nixpkgs#home-manager -- switch --flake ~/.config/nix

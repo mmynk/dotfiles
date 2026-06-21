@@ -13,7 +13,7 @@
     home-manager,
     ...
   }: let
-    system = builtins.currentSystem;
+    system = "<system>";
     pkgs = nixpkgs.legacyPackages.${system};
   in {
     homeConfigurations = {
