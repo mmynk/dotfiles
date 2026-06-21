@@ -29,9 +29,19 @@ replace_system() {
 }
 
 safe_copy() {
+    # For SEED templates that should diverge per machine (e.g. extra_aliases):
+    # copy only if absent, so re-running install never clobbers local edits.
     if [ ! -f "$2" ]; then
         cp "$1" "$2"
     fi
+}
+
+render() {
+    # For GENERATED files (flake.nix, home.nix) that get sed-substituted:
+    # always overwrite from the repo, so a repo change actually reaches the
+    # deployed copy on a re-run. (safe_copy would skip an existing file and
+    # leave stale content — the currentSystem bug.)
+    cp -f "$1" "$2"
 }
 
 install_nix() {
@@ -101,9 +111,9 @@ install_linux() {
     echo "Setting up nix home-manager..."
     mkdir -p ~/.config/nix/home-manager
 
-    safe_copy ./nix.conf ~/.config/nix/nix.conf
-    safe_copy ./linux/flake.nix ~/.config/nix/flake.nix
-    safe_copy ./linux/home.nix ~/.config/nix/home-manager/home.nix
+    mkdir -p ~/.config/nix && ln -sf "$(pwd)/nix.conf" ~/.config/nix/nix.conf
+    render ./linux/flake.nix ~/.config/nix/flake.nix
+    render ./linux/home.nix ~/.config/nix/home-manager/home.nix
 
     replace_string "<pwd>" "$(pwd)" ~/.config/nix/home-manager/home.nix
     replace_user ~/.config/nix/flake.nix
@@ -122,8 +132,8 @@ install_mac() {
     echo "Setting up nix-darwin..."
     mkdir -p ~/.config/nix
 
-    safe_copy ./nix.conf ~/.config/nix/nix.conf
-    safe_copy ./darwin/flake.nix ~/.config/nix/flake.nix
+    mkdir -p ~/.config/nix && ln -sf "$(pwd)/nix.conf" ~/.config/nix/nix.conf
+    render ./darwin/flake.nix ~/.config/nix/flake.nix
 
     replace_user ~/.config/nix/flake.nix
 

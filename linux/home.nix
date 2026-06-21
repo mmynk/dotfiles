@@ -6,16 +6,19 @@
   home.stateVersion = "23.05";
   home.packages = with pkgs; [
     bat
+    below
     eza
     fd
     fish
     fzf
+    gh
     glow
     less
     mosh
     neovim
     ripgrep
     starship
+    tmux
     trash-cli
     tree
     zoxide
