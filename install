@@ -28,19 +28,9 @@ replace_system() {
     replace_string "<system>" "$sys" "$1"
 }
 
-safe_copy() {
-    # For SEED templates that should diverge per machine (e.g. extra_aliases):
-    # copy only if absent, so re-running install never clobbers local edits.
-    if [ ! -f "$2" ]; then
-        cp "$1" "$2"
-    fi
-}
-
 render() {
-    # For GENERATED files (flake.nix, home.nix) that get sed-substituted:
-    # always overwrite from the repo, so a repo change actually reaches the
-    # deployed copy on a re-run. (safe_copy would skip an existing file and
-    # leave stale content — the currentSystem bug.)
+    # For generated files (flake.nix, home.nix) that get sed-substituted: always
+    # overwrite from the repo so a repo change reaches the deployed copy on re-run.
     cp -f "$1" "$2"
 }
 
@@ -66,12 +56,6 @@ setup_fish() {
     # Install fisher and all plugins from fish_plugins
     echo "Installing fish plugins..."
     fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher update"
-
-    # Seed extra_aliases from OS-specific template
-    case "$OS_TYPE" in
-        Linux*)     safe_copy ./shell/extra_aliases_linux.fish ~/.extra_aliases.fish ;;
-        Darwin*)    safe_copy ./shell/extra_aliases_darwin.fish ~/.extra_aliases.fish ;;
-    esac
 }
 
 setup_nvim() {
@@ -142,6 +126,11 @@ install_mac() {
 
     setup_common
 }
+
+# Run internal tooling if it exists
+if [ -f ./internal/install ]; then
+    . ./internal/install
+fi
 
 case "$OS_TYPE" in
     Linux*)     install_linux ;;
