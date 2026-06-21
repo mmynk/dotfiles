@@ -18,6 +18,7 @@
         fd
         fish
         fzf
+        glow
         less
         neovim
         python3
@@ -38,6 +39,7 @@
 
       # Enable alternative shell support in nix-darwin.
       programs.fish.enable = true;
+      users.users."<username>".shell = pkgs.fish;
 
       # Set Git commit hash for darwin-version.
       system.configurationRevision = self.rev or self.dirtyRev or null;
@@ -45,6 +47,24 @@
       # Used for backwards compatibility, please read the changelog before changing.
       # $ darwin-rebuild changelog
       system.stateVersion = 6;
+
+      # Daily auto-update: update flake inputs, rebuild, and gc
+      launchd.daemons.nix-auto-update = {
+        script = ''
+          export PATH=/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH
+          OWNER=$(stat -f '%Su' /dev/console)
+          FLAKE_DIR="/Users/$OWNER/.config/nix"
+          cd "$FLAKE_DIR"
+          nix flake update 2>&1
+          darwin-rebuild switch --flake ".#$OWNER" 2>&1
+          nix store gc 2>&1
+        '';
+        serviceConfig = {
+          StartCalendarInterval = [{ Hour = 3; Minute = 0; }];
+          StandardOutPath = "/tmp/nix-auto-update.log";
+          StandardErrorPath = "/tmp/nix-auto-update.err.log";
+        };
+      };
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";

@@ -37,15 +37,16 @@ install_nix() {
 setup_fish() {
     echo "Setting up fish..."
 
-    # Install fisher if not present
-    if [ ! -f ~/.config/fish/functions/fisher.fish ]; then
-        echo "Installing fisher..."
-        fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
-    fi
+    # Symlink fish config and aliases
+    mkdir -p ~/.config/fish
+    ln -sf "$(pwd)/shell/config.fish" ~/.config/fish/config.fish
+    ln -sf "$(pwd)/shell/fish_plugins" ~/.config/fish/fish_plugins
+    ln -sf "$(pwd)/shell/aliases.fish" ~/.aliases.fish
+    ln -sf "$(pwd)/config/starship.toml" ~/.config/starship.toml
 
-    # Install fish plugins
+    # Install fisher and all plugins from fish_plugins
     echo "Installing fish plugins..."
-    fish -c "fisher install PatrickF1/fzf.fish" 2>/dev/null || true
+    fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher update"
 
     # Seed extra_aliases from OS-specific template
     case "$OS_TYPE" in
@@ -54,16 +55,35 @@ setup_fish() {
     esac
 }
 
+setup_nvim() {
+    echo "Setting up nvim..."
+    ln -sf "$(pwd)/config/nvim" ~/.config/nvim
+}
+
 setup_tmux() {
     echo "Setting up tmux..."
     mkdir -p ~/.config/tmux
-    safe_copy ./config/tmux.conf ~/.config/tmux/tmux.conf
+    ln -sf "$(pwd)/config/tmux.conf" ~/.config/tmux/tmux.conf
 
     # Install TPM if not present
     if [ ! -d ~/.tmux/plugins/tpm ]; then
         echo "Installing TPM..."
         git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
     fi
+}
+
+setup_git() {
+    echo "Setting up git..."
+    mkdir -p ~/.config/git
+    ln -sf "$(pwd)/config/git/config" ~/.config/git/config
+    ln -sf "$(pwd)/config/git/excludes" ~/.config/git/excludes
+}
+
+setup_common() {
+    setup_fish
+    setup_nvim
+    setup_tmux
+    setup_git
 }
 
 install_linux() {
@@ -83,8 +103,7 @@ install_linux() {
     echo "Building home-manager configuration..."
     nix run nixpkgs#home-manager -- switch --flake ~/.config/nix
 
-    setup_fish
-    setup_tmux
+    setup_common
 }
 
 install_mac() {
@@ -101,8 +120,7 @@ install_mac() {
     echo "Building darwin configuration..."
     sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ~/.config/nix#$USER
 
-    setup_fish
-    setup_tmux
+    setup_common
 }
 
 case "$OS_TYPE" in
@@ -114,3 +132,7 @@ esac
 echo ""
 echo "Installation complete!"
 echo "Open tmux and press prefix + I to install tmux plugins."
+echo ""
+echo "If fish is not your default shell:"
+echo "  echo \$(which fish) | sudo tee -a /etc/shells"
+echo "  chsh -s \$(which fish)"

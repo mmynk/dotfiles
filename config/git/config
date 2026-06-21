@@ -1,6 +1,15 @@
 [user]
-	name = Mohit Mayank
-	email = momynk@amazon.com
+	name = mmynk
+	email = mohit.ritanil@gmail.com
 
-[includeIf "gitdir://~/dev"]
-    path = ~/dev/.gitconfig
+[core]
+	excludesfile = ~/.config/git/excludes
+
+[pull]
+	ff = only
+
+[push]
+	autoSetupRemote = true
+
+[includeIf "gitdir:~/dev/"]
+	path = ~/dev/.gitconfig
