@@ -24,19 +24,10 @@
     zoxide
   ];
 
-  programs.fish.enable = true;
-
-  home.file.".config/fish/config.fish" = {
-    source = config.lib.file.mkOutOfStoreSymlink <pwd>/shell/config.fish;
-  };
-
-  home.file.".aliases.fish" = {
-    source = config.lib.file.mkOutOfStoreSymlink <pwd>/shell/aliases.fish;
-  };
-
-  home.file.".config/starship.toml" = {
-    source = config.lib.file.mkOutOfStoreSymlink <pwd>/config/starship.toml;
-  };
-
+  # Dotfile symlinks (config.fish, aliases.fish, starship.toml, etc.) are owned
+  # by the install script's setup_fish/setup_common on BOTH linux and mac — see
+  # ./install. home-manager here only installs packages, so it does not fight the
+  # install script over the same target files. (Having both manage them caused
+  # "Conflicting managed target files" / clobber errors.)
   programs.home-manager.enable = true;
 }
