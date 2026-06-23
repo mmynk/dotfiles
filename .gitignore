@@ -1,4 +1,6 @@
 .DS_Store
+*lock.json
 
 # Machine-local / environment-specific config and hooks. Not part of this repo.
 /internal/
+
