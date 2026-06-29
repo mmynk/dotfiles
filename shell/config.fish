@@ -7,7 +7,7 @@ end
 set -gx VISUAL nvim
 set -gx EDITOR nvim
 set -gx LESS '-R'
-set -gx BAT_PAGER 'less -R'
+set -gx BAT_PAGER 'less -R --mouse'
 set -gx PAGER 'bat --paging=always'
 fish_add_path $HOME/.local/bin $HOME/local/bin
 
