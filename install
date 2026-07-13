@@ -82,11 +82,33 @@ setup_git() {
     ln -sf "$(pwd)/config/git/excludes" ~/.config/git/excludes
 }
 
+setup_claude() {
+    echo "Setting up claude..."
+    mkdir -p ~/.claude/skills
+
+    # Harness-agnostic agent instructions. Claude Code reads ~/.claude/CLAUDE.md;
+    # the source file is named AGENTS.md so the same file can be symlinked to other
+    # harnesses' expected paths. Employer/machine-local rules are pulled in by the
+    # @import at the bottom of AGENTS.md, which resolves into the gitignored
+    # internal/ dir only on machines that have it.
+    ln -sf "$(pwd)/config/ai/AGENTS.md" ~/.claude/CLAUDE.md
+
+    # Skills: symlink each so edits stay live. Remove any existing entry first —
+    # ln -sf won't replace a real directory (it would nest the link inside it),
+    # so an existing skill dir must be cleared before relinking.
+    for skill in config/ai/skills/*/; do
+        name="$(basename "$skill")"
+        rm -rf ~/.claude/skills/"$name"
+        ln -sfn "$(pwd)/${skill%/}" ~/.claude/skills/"$name"
+    done
+}
+
 setup_common() {
     setup_fish
     setup_nvim
     setup_tmux
     setup_git
+    setup_claude
 }
 
 install_linux() {
