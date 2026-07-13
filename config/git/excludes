@@ -10,8 +10,12 @@
 build
 
 # AI
+CLAUDE.md
 memory-bank
 .clinerules
 .clineignore
 .rooignore
 wasabi-toolbag/
+
+# Scratch / personal working notes
+scratch/
