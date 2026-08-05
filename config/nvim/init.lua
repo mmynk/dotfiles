@@ -935,6 +935,10 @@ require('lazy').setup({
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    -- The opts below are the legacy `nvim-treesitter.configs` schema, which only
+    -- exists on the master branch. The upstream default branch carries a rewrite
+    -- with an incompatible API, so the branch must be pinned explicitly.
+    branch = 'master',
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`

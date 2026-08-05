@@ -2,6 +2,9 @@ return {
 
   { -- Linting
     'mfussenegger/nvim-lint',
+    -- Each configured linter must be installed and on $PATH; a missing binary
+    -- raises an error on every lint event. Re-enable alongside an installed one.
+    enabled = false,
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
       local lint = require 'lint'
