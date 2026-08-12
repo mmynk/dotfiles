@@ -21,6 +21,8 @@
     tmux
     trash-cli
     tree
+    # nvim-treesitter's main branch shells out to this CLI to build parsers.
+    tree-sitter
     zoxide
   ];
 

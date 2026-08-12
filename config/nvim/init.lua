@@ -937,21 +937,39 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     branch = 'main',
     build = ':TSUpdate',
-    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
-    -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
-      -- Autoinstall languages that are not installed
-      auto_install = true,
-      highlight = {
-        enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = { 'ruby' },
-      },
-      indent = { enable = true, disable = { 'ruby' } },
-    },
+    -- This branch exposes only `setup()` + `install()` — no
+    -- `nvim-treesitter.configs` module and no `highlight`/`indent` option
+    -- table, so highlighting starts per-buffer against the installed parsers.
+    config = function(plugin)
+      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+
+      -- Parsers installed here shadow the ones neovim bundles, but their
+      -- matching queries live under `runtime/`, which is off the runtimepath.
+      -- Prepend so both come from this plugin: pairing a newer parser with
+      -- neovim's older bundled query fails on grammar fields it does not have.
+      vim.opt.runtimepath:prepend(plugin.dir .. '/runtime')
+
+      require('nvim-treesitter').setup()
+      require('nvim-treesitter').install(parsers)
+
+      vim.api.nvim_create_autocmd('FileType', {
+        desc = 'Start treesitter highlighting for languages with an installed parser',
+        callback = function(event)
+          -- `start` throws when the filetype has no parser, which is the normal
+          -- case for most buffers, so a failure here is not worth reporting.
+          if not pcall(vim.treesitter.start, event.buf) then
+            return
+          end
+
+          -- Ruby's indent rules read vim's regex syntax state, which treesitter
+          -- highlighting alone leaves off. Scoped to ruby so every other buffer
+          -- runs one highlighter rather than two.
+          if vim.bo[event.buf].filetype == 'ruby' then
+            vim.bo[event.buf].syntax = 'ON'
+          end
+        end,
+      })
+    end,
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
     --
