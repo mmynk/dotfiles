@@ -84,7 +84,7 @@ setup_git() {
 
 setup_claude() {
     echo "Setting up claude..."
-    mkdir -p ~/.claude/skills
+    mkdir -p ~/.claude/skills ~/.claude/rules
 
     # Harness-agnostic agent instructions. Claude Code reads ~/.claude/CLAUDE.md;
     # the source file is named AGENTS.md so the same file can be symlinked to other
@@ -92,6 +92,10 @@ setup_claude() {
     # @import at the bottom of AGENTS.md, which resolves into the gitignored
     # internal/ dir only on machines that have it.
     ln -sf "$(pwd)/config/ai/AGENTS.md" ~/.claude/CLAUDE.md
+
+    # Task order and the evidence bar. Claude Code loads every file in ~/.claude/rules.
+    # Other files in that dir are employer-managed and are left alone.
+    ln -sf "$(pwd)/config/ai/rules/working-agreement.md" ~/.claude/rules/working-agreement.md
 
     # Skills: symlink each so edits stay live. Remove any existing entry first —
     # ln -sf won't replace a real directory (it would nest the link inside it),

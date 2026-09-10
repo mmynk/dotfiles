@@ -1,52 +1,82 @@
 # Global Preferences
 
-Harness-agnostic agent instructions. This file is symlinked to whatever path a
-given harness expects (e.g. `~/.claude/CLAUDE.md`). Machine-local / employer-specific
-rules are pulled in via the import at the bottom — absent on machines that don't have it.
+Harness-agnostic agent instructions. Symlinked to the path each harness expects
+(e.g. `~/.claude/CLAUDE.md`). Machine-local rules come from the import at the bottom.
+Task order and the evidence bar live in `~/.claude/rules/working-agreement.md`.
 
-## Behavior
+## Language
 
-- **Only output ASD-STE100 Simplified Technical English.** Write short sentences with one idea each. Use active voice. Use the simple present or the simple past. Give each word one meaning. Do not use idioms, filler, or introductory phrases. This rule applies to all text for the user, and to summaries and explanations. It does not apply to code, identifiers, or quoted output.
-- Don't blindly agree with suggestions or requests. If something doesn't actually improve the code, or if the user's suggestion has a downside, say so and explain the tradeoff. Question the human when appropriate.
-- "Matches the existing convention" is NOT a justification on its own — it's a description. Existing patterns may be bad. When deciding whether to follow a local pattern, first judge whether the pattern is actually *good* (idiomatic, readable, performant, bug-resistant by industry standards). If the surrounding code does something suboptimal, say so and recommend the better approach, even if it means the new code diverges locally — note the divergence so it's deliberate. Consistency with a bad pattern is a real but secondary cost; weigh it, don't let it win by default. Lead recommendations with the engineering reason (DRY, type-safety, readability, perf, blast radius), and cite convention only as a tiebreaker after the merits are equal.
-- After solving something non-trivial (non-obvious root cause, counterintuitive result, multi-piece interaction, or a tricky data/control flow), proactively close with a visual/structured explanation — pick the medium that fits (table, ASCII, Mermaid, or HTML). Skip it for typos, one-liners, renames, and formatting; when unsure whether it clears the bar, offer in one line rather than dumping an essay.
-- Put common things in a common home. Before writing a helper, check whether one exists and reuse it; a helper used (or re-rolled) by more than one module belongs in a shared module, not copied. "Every sibling defines its own local copy" is not license to add the (N+1)th — it's a signal to extract. When porting or writing a second near-identical helper, hoist it (and note the divergence if you deliberately keep a local one). Weigh the extraction against blast radius — don't refactor unrelated call sites without need — but new code should consume the shared version.
-- Work outside-in: understand → broad → narrow → act, and plan before doing. First nail down what's actually being asked — restate it, resolve ambiguity — before touching anything. Then go *broad*: map the terrain (how the system fits together, what already exists, where the real constraints are) before committing to an approach. Then go *narrow*: act on the specific thing, informed by the map. Ground every step in verified fact, not assumption or vibes — and keep the two explicitly separate ("confirmed X; inferring Y"). When you claim something works, verify it against the source of truth (the external system's own state), not the code's self-report (return values, logs, or metrics the same code emits are it grading its own homework). For anything non-trivial, present the plan before executing it. Doing it the *right* way beats doing it fast.
+Write ASD-STE100 Simplified Technical English in every reply, comment, docstring, commit
+message and CR description. Short sentences. One idea each. Active voice. Simple present
+or simple past. One meaning per word. No idioms and no metaphors.
 
-## Shell Commands
+Say each thing once. Do not write:
 
-- Prefer multi-line strings over `$()` command substitution or heredocs wherever possible.
-- For multi-line git commit messages, use a quoted multi-line string directly — never use `$(cat <<'EOF'...EOF)`.
-- Example: `git commit -m "subject\n\nbody line 1\nbody line 2"` or a literal multi-line quoted string.
-- The Bash harness runs commands via `eval` under zsh. Do NOT defensively escape `!` as `\!` — that backslash is the bug: zsh leaves `\!` intact, so a literal `\` reaches the program (e.g. in Python, `\!=` is read as a line-continuation char and throws `SyntaxError: unexpected character after line continuation character`). A bare `!` is almost always fine — `!=` is NOT a zsh history expansion (only `!` followed by a word/digit/`!`/`?`/`^` is), so `n % 2 != 1` runs cleanly. Rule: write `!` bare, never `\!`. Only when `!` is genuinely followed by a history designator (e.g. `!foo`, `!1`) rewrite to avoid it — in jq `(x == y) | not`, in tests/shell `-ne`/`-z`/`unless`.
-- zsh aborts the whole command on an unmatched glob (`nomatch`), unlike bash which passes it through literally. So `--include=*.java` errors with `no matches found` when the cwd has no `.java` files. Quote globs meant for the program, not the shell: `grep -r --include="*.java" "x" .`, or prefer `rg "x" -g "*.java"` which takes globs as real arguments.
+- A sentence that repeats the sentence before it in other words.
+- A closing paragraph that summarizes the reply.
+- A preamble. Do not announce what you will do. Do it, then report it.
+- A hedge tail: "though this may vary", "it is worth noting", "that said".
+- An aphorism. Do not write "X is a Y, not a Z", "not A, but B", or a verdict as a
+  sentence fragment. Write the instruction instead. "Name the consumers before you
+  design" is correct. "Zero consumers is a stop, not a caveat" is wrong.
+- An em-dash aside where a full stop works.
+- A section header or a bullet list in a reply that carries one idea.
 
-## Code Comments
+Delete a sentence when you cannot say why it is there.
 
-- In code (production and tests), comments and javadocs should explain the **invariant** the code maintains, not its history or the bug it fixed. No "Regression:", "Fix for X", "added for Y", "previously did A, now does B", or descriptions of the bug being guarded against. Those belong in the commit message and code-review description. Test docstrings should describe the property being asserted, not why the test exists.
-- Also no **roadmap / planning-position** markers in shipped comments: no phase/task/ticket markers (`P1`, `P2`, `A1`, `T1`, `#NNN`), no "later phase", "first; … follows", "for now", "shipped", and no references to planning-doc sections (`HLD 02 §5`, design-doc names). A comment says what is true and why it holds — not where the code sits in a plan or which doc/ticket motivated it. That belongs in the CR/commit/planning docs. (Same leak class as the task-markers-in-CR-text rule, applied to code comments.)
-- Default to **no comment**. A comment must earn its place by saying something the code does not already say. If a line reads self-evidently — especially when it now matches its siblings (e.g. `foo: fooLambda` among a list of identical assignments) — adding a comment draws false attention to a non-issue; leave it bare. Reserve comments for genuinely non-obvious *why*, and put that near the code the constraint actually governs, not on an incidental line.
-- Keep invariant comments **bitrot-proof**: state the durable *behavioral* constraint, not references that go stale. No naming of other symbols (class/field/module names) that a rename or move would silently falsify, and no restating a value the code already pins. An out-of-date comment is worse than none, so prefer wording that stays true across refactors — or no comment.
+## Disagreement
 
-## Java Style
+Say when a request does not improve the code, and name the cost. Do not agree only to
+please the user.
 
-- Always use braces for `if`, `else`, `for`, `while` blocks, even when the body is a single line.
-- Never fully-qualify a type inline when it isn't needed to disambiguate — add a normal `import` and use the simple name (e.g. `import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;` then `@SuppressFBWarnings(...)`, not `@edu.umd.cs.findbugs.annotations.SuppressFBWarnings(...)`). Only fully-qualify to resolve a genuine name collision.
+"It matches the existing convention" is a description, not a reason. Judge the pattern
+first: is it readable, idiomatic, safe, fast? Recommend the better approach when the
+surrounding code is worse, and say that the new code diverges. Lead with the engineering
+reason. Use convention only when the merits are equal.
 
-## Git Commits
+## Explanation
 
-- Keep commit title (first line) short — under ~55-60 characters so it doesn't get cut off.
-- Put additional details in the commit body, not the title.
-- When making iterative fixes to the same logical change (review feedback, bug fixes in just-committed code, refactors), amend the existing commit instead of creating a new one. One clean commit per logical change.
+Offer a table, ASCII drawing or Mermaid diagram after you solve something non-obvious: a
+hidden root cause, a surprising result, or an interaction between parts. Skip it for
+typos, renames and formatting. Offer in one line when you are unsure.
 
-## Match build/verification scope to change scope
+## Shared code
 
-Before running any full build/test/lint sweep (`npm run build`, `cargo build`, full `vitest`/`pytest`/`mocha`, etc.), ask: *can this change actually break compile, tests, or static analysis?* If not, skip the sweep entirely.
-- Comment / javadoc / markdown / doc-prose, or a pure rename in isolation → **no build**. Just commit & push. These cannot break compilation, tests, or lint/static analysis.
-- Single-file logic edit → targeted compile/test of that file if anything, not the full release gauntlet.
-- Cross-cutting change, or the final pre-review check → one full sweep is appropriate.
+Search for an existing helper before you write one. A helper that two modules need belongs
+in a shared module. Hoist the helper when you write the second copy. Keep a local copy
+only on purpose, and say why. Do not change unrelated call sites to do it.
 
-The "build green before review" habit is for code changes, not prose. Don't fire a multi-minute full-test + static-analysis run for a sentence of comment.
+## Comments
+
+Default to no comment. A comment must say what the code does not.
+
+- State the invariant the code holds. Do not state the bug it fixed, what the code did
+  before, or the ticket that caused it. That belongs in the commit message.
+- No plan markers: no `P1`, `T1`, `#NNN`, "phase 2", "for now", or design-doc sections.
+- Do not name another class, field or module. A rename makes that comment false.
+- Do not repeat a value the code already sets.
+- One invariant per comment. Rename the code when a comment needs a paragraph.
+
+## Shell
+
+- Use a quoted multi-line string, not `$()` or a heredoc. This includes commit messages:
+  `git commit -m "subject\n\nbody line 1\nbody line 2"`.
+- Write `!` bare. Never write `\!`. The harness runs zsh through `eval`, zsh keeps the
+  backslash, and the program receives a literal `\`. `!=` is not history expansion.
+  Rewrite only when `!` comes before a word or a digit (`!foo`, `!1`).
+- Quote a glob you pass to a program: `grep -r --include="*.java" "x" .`. zsh aborts the
+  command on an unmatched glob. `rg "x" -g "*.java"` takes the glob as an argument.
+
+## Java
+
+- Always use braces, including a single-line body.
+- Import the type and use the simple name. Fully qualify only to break a name collision.
+
+## Commits
+
+- Keep the title under 60 characters. Detail goes in the body.
+- Amend the existing commit for a later fix to that same change. One commit per logical
+  change.
 
 <!-- Machine-local / employer-specific instructions. Path is relative to this file
      (config/ai/) and points into the gitignored internal/ dir, so it only
