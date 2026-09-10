@@ -1,6 +1,6 @@
 ---
 name: elevate
-description: Raise a code change to a high engineering bar — correctness first, then craft and robustness. Runs one concurrent wave of correctness finders (line-scan, removed-behavior, cross-file, language-pitfall, wrapper/proxy), a conventions check, and a principle-grounded craft/robustness layer (SRP, DRY, DDD domain purity, API design, naming, failure modes, data-evolution safety) drawing on Clean Code, The Pragmatic Programmer, Designing Data-Intensive Applications, Domain-Driven Design (Evans), and The Staff Engineer's Path — then verifies findings in file-batched groups and applies the fixes. Use on demand ("/elevate", "elevate this", "review to a high bar") before a code review.
+description: Raise a code change to a high engineering bar — correctness first, then craft and robustness. Runs one concurrent wave of correctness finders (line-scan, removed-behavior, cross-file, language-pitfall, wrapper/proxy), a conventions check, and a principle-grounded craft/robustness layer (SRP, DRY, DDD domain purity, API design, naming, failure modes, runtime/platform semantics, data-evolution safety) drawing on Clean Code, The Pragmatic Programmer, Designing Data-Intensive Applications, Domain-Driven Design (Evans), and The Staff Engineer's Path — then verifies findings in file-batched groups and applies the fixes. Use on demand ("/elevate", "elevate this", "review to a high bar") before a code review.
 user-invocable: true
 allowed-tools:
   - Bash
@@ -57,7 +57,14 @@ Otherwise write `/tmp/elevate-brief.md` containing:
 - the changed symbols (functions/classes/exports touched);
 - **for each changed symbol, its call sites** — one `Grep` per symbol. This is the
   single highest-value item in the brief: most real bugs live in the interaction
-  between changed code and unchanged callers, which a diff-only reviewer cannot see;
+  between changed code and unchanged callers, which a diff-only reviewer cannot see.
+  One call hop out is in review scope even though the diff never touched it;
+- **the runtime contract** — what executes this code: a request handler, a serverless
+  invocation, a batch job, a UI render, a signal handler. Note its lifecycle rules:
+  when the host may suspend, freeze, or reclaim the process, what it guarantees to
+  flush, what it charges per call. For example, AWS Lambda may freeze the process once
+  the handler returns, so work that started and was never awaited can simply never
+  finish. Without this, the wave can only find defects that live in the changed lines;
 - paths (not contents) of the root `CLAUDE.md` and any `CLAUDE.md` in touched directories.
 
 Then set the budget tier from the diff size:
@@ -70,7 +77,7 @@ Then set the budget tier from the diff size:
 
 State the tier you picked and why, in one line.
 
-## Phase 1 — One concurrent wave (9 agents, single message)
+## Phase 1 — One concurrent wave (10 agents, single message)
 
 Launch all of the following via the `Agent` tool **in one message**. Give each the
 path `/tmp/elevate-brief.md` (not the diff inline) and one angle. Each returns up to
@@ -78,10 +85,18 @@ the tier's candidate budget as `{file, line, summary, failure_scenario}`; the cr
 agents add `{principle, cost, fix}`, where `principle` names the rule and its source
 so the finding carries authority.
 
-Pass through every candidate with a nameable failure scenario. A finder that silently
-drops half-believed candidates bypasses the verify step — that is the main way real
-bugs get lost. Do not let one angle's conclusions suppress another's: if two angles
-flag the same line for different reasons, both go through.
+A candidate names the input, state, or runtime event that makes the code do the wrong
+thing, and the resulting behavior. "This might be unsafe" is not a candidate. But pass
+through every candidate that clears that bar, even a half-believed one — the verify step
+exists to judge them, and a finder that drops them silently bypasses it. That is the main
+way real bugs get lost. Do not let one angle's conclusions suppress another's: if two
+angles flag the same line for different reasons, both go through.
+
+Judge each intended change by its *consequence*, not just its intent. Confirming that a
+refactor happened is a blind spot: moving logic out of a unit can satisfy the goal and
+create a defect at the new site. When something moved, review the destination on its own
+terms — is this the right place, under this runtime, at this layer, with this error and
+logging contract?
 
 Skip test/fixture hunks (`test/`, `spec/`, `__tests__/`, `*_test.*`, `*.test.*`,
 `fixtures/`, `testdata/`) unless the change is *to* test infrastructure.
@@ -118,7 +133,7 @@ whose `delegate` field resolves via `session.get(...)` instead of `delegate.get(
 will re-enter the cache or recurse. Check the wrapper forwards every method its
 callers actually use.
 
-### Robustness (agent 6)
+### Robustness (agents 6–7)
 
 **F — failure modes.** What happens on the unhappy path? Unhandled exceptions, silent
 catch-and-swallow, missing timeouts/retries/idempotency, resource leaks, degradation
@@ -127,13 +142,31 @@ tests, config defaults flipped. Flag happy-path-only code.
 Grounds: *DDIA* (faults are the norm; design for partial failure), *Pragmatic
 Programmer* (crash early, assertive programming).
 
-### Craft (agents 7–9)
+**G — runtime contract & cost.** The defects here hide in correct-looking lines. Work
+from the runtime contract and the call sites in the brief, not from the diff alone.
+*Lifecycle:* does the code assume work completes that the host may never run — async
+work started but not awaited before the unit of execution ends, cleanup on a path the
+runtime can skip, state cached across invocations that the platform may discard or
+reuse? *Contracts one hop out:* does a called module behave as the caller assumes — its
+severity levels, error types, retry and timeout behavior, whether it throws or returns?
+An expected, handled condition that the callee reports as a failure pages someone; the
+offending line sits in a file the diff never touched and it is still this change's
+defect. *Waste:* correct code that pays a cost it does not need — work done eagerly but
+consumed on one branch only, a fetch inside a concurrent batch that one mode discards,
+per-item I/O where a batch call exists, log or metric volume out of proportion to its
+value.
+Grounds: *DDIA* (know the guarantees the platform actually gives you), *Pragmatic
+Programmer* (don't assume it — prove it), *Staff Engineer's Path* (a cost paid on every
+request is a design decision, not an implementation detail).
 
-These three replace both `/simplify`'s four angles and the old eight-dimension catalog.
+### Craft (agents 8–10)
+
+These three, with G's waste lens, replace both `/simplify`'s four angles and the old
+eight-dimension catalog.
 For each finding state the concrete cost — what is duplicated, wasted, harder to
 maintain, or which `CLAUDE.md` rule is broken — not a crash.
 
-**G — structure & responsibility.** SRP: does each unit do one thing, or does it mix
+**H — structure & responsibility.** SRP: does each unit do one thing, or does it mix
 levels of abstraction and change for more than one reason? DRY applied with judgment:
 flag *knowledge* duplication (the same rule encoded twice) and reuse misses (a helper
 that already exists), but equally flag the opposite failure — a premature or wrong
@@ -142,7 +175,7 @@ is obvious." Also: redundant or derivable state, deep nesting, dead code left be
 Grounds: *Clean Code* (one thing, one level of abstraction), *Pragmatic Programmer*
 (DRY = one authoritative representation; rule of three).
 
-**H — interface, domain purity & naming.** Is each signature honest and minimal? Flag
+**I — interface, domain purity & naming.** Is each signature honest and minimal? Flag
 parameters a method can derive itself (thread `site`, derive `siteId` locally — do not
 pass both), booleans that should be enums, primitive obsession where a value object
 would enforce an invariant, `Optional` as a *parameter* (avoid) vs a *return* (fine),
@@ -155,7 +188,7 @@ Grounds: *Clean Code* (few arguments, no flag args, intention-revealing names), 
 (layered architecture, entities own their invariants), *Pragmatic Programmer* (design
 by contract; easy to use right, hard to use wrong).
 
-**I — evolvability, altitude & conventions.** Will this be cheap to change? Flag
+**J — evolvability, altitude & conventions.** Will this be cheap to change? Flag
 coupling that amplifies future change, schema/wire formats with no
 forward/backward-compatibility story, breaking a published contract without
 versioning, and altitude errors — a special case bolted onto shared infrastructure
@@ -179,10 +212,11 @@ wait on verify results.
 
 ```
 1. Split candidates into two pools:
-     correctness = angles A-F and the sweep
-     craft       = angles G-I
+     correctness = angles A-G and the sweep
+     craft       = angles H-J
    Correctness gets small batches (a wrong call ships a bug). Craft gets large
-   ones (a wrong call costs a dismissed suggestion).
+   ones (a wrong call costs a dismissed suggestion). By that test G splits:
+   its lifecycle and contract candidates are correctness, its waste ones craft.
 
 2. Sort each pool by file path, so candidates in the same file stay adjacent.
 
@@ -241,10 +275,13 @@ unit), say so and cite the tradeoff. Weigh engineering merit over dogma. Prefer
 Close with a tight summary grouped by severity:
 - **Correctness** (A–E + sweep) — what was wrong, what was fixed, what is PLAUSIBLE
   and awaiting a judgment call.
-- **Robustness** (F) — failure modes hardened.
-- **Craft** (G–I) — each tagged with the principle that motivated it.
+- **Robustness** (F–G) — failure modes hardened, runtime assumptions corrected, wasted
+  work removed.
+- **Craft** (H–J) — each tagged with the principle that motivated it.
 - **Skipped** — findings deliberately not applied, with reasons.
 
 State the tier that ran and the agent count, so the reader knows the depth of what
-actually executed. If the change was already clean at this bar, say that plainly
-rather than inventing work.
+actually executed. Name the runtime contract you reviewed against, and the files you
+read one hop outside the diff — if you read none, say so, because the reader then knows
+the review covered only the changed lines. If the change was already clean at this bar,
+say that plainly rather than inventing work.
