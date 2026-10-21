@@ -1,6 +1,6 @@
 ---
 name: elevate
-description: Raise a code change to a high engineering bar. Correctness first, then architecture, robustness and craft. Runs one concurrent wave of eleven finders, verifies their findings in file batches, and applies the fixes. Pass a design brief or plan to review its architecture before any code exists. Use on demand ("/elevate", "elevate this", "review to a high bar") before a code review.
+description: Raise a code change to a high engineering bar. Correctness first, then architecture, robustness and craft. Runs one concurrent wave of twelve finders, verifies their findings in file batches, and applies the fixes. Pass a design brief or plan to review its architecture before any code exists. Use on demand ("/elevate", "elevate this", "review to a high bar") before a code review.
 user-invocable: true
 allowed-tools:
   - Bash
@@ -86,18 +86,18 @@ Then set the budget tier from the diff size:
 A small diff gets fewer candidates per angle, never fewer angles. State the tier you
 picked and why, in one line.
 
-## Phase 1 — One concurrent wave (11 agents, single message)
+## Phase 1 — One concurrent wave (12 agents, single message)
 
-Launch all eleven via the `Agent` tool **in one message**. The angles have no data
+Launch all twelve via the `Agent` tool **in one message**. The angles have no data
 dependency on each other. Order belongs to the report and to fix application. Give each
-agent the brief path and one angle. Agents H, I and K run with `model: "sonnet"`. The
+agent the brief path and one angle. Agents H, I, K and L run with `model: "sonnet"`. The
 others inherit the session model.
 
 Finders and verifiers are read-only: no edits, builds, branch changes or AWS writes. An
 AWS read uses a profile the brief names, with a narrow query.
 
 Each finder returns up to the tier's candidate budget as
-`{file, line, summary, failure_scenario}`. Agents F–I and K add `{principle, cost, fix}`.
+`{file, line, summary, failure_scenario}`. Agents F–I, K and L add `{principle, cost, fix}`.
 J uses its own shape. `principle` names the rule or the industry pattern and its source,
 so the finding carries authority. A repo precedent is never a reason, for or against.
 
@@ -113,8 +113,9 @@ the goal and create a defect at the new site. When something moved, review the
 destination on its own terms: is this the right place, under this runtime, at this
 layer, with this error and logging contract?
 
-Skip test/fixture hunks (`test/`, `spec/`, `__tests__/`, `*_test.*`, `*.test.*`,
-`fixtures/`, `testdata/`) unless the change is *to* test infrastructure.
+Angles A–K skip test/fixture hunks (`test/`, `spec/`, `__tests__/`, `*_test.*`,
+`*.test.*`, `fixtures/`, `testdata/`) unless the change is *to* test infrastructure.
+Angle L reads only those hunks.
 
 ### Correctness (agents 1–5)
 
@@ -282,6 +283,45 @@ Grounds: *ASD-STE100* Simplified Technical English (one idea per sentence, activ
 one meaning per word), *Clean Code* ch. 4 (a comment explains intent; redundant,
 journal and misleading comments are defects).
 
+### Test determinism (agent 12)
+
+**L — flaky tests.** A test that passes today must pass on any date, in any time zone,
+in any order, and on any host. Read each test the diff adds or changes. Then Read every
+helper and fixture builder it calls, also when the diff did not touch that helper. The
+wall-clock read often sits in a shared helper outside the diff. For each test, ask which
+run makes it fail:
+- *Time.* A wall-clock read: `now()`, `LocalDate.now`, `Instant.now`, `new Date()`,
+  `System.currentTimeMillis`, `Date.now`, `datetime.now`, `time.time`. Trace each value
+  to the assertion. A fixture dated from the wall clock and a service on a fixed clock
+  move one day apart each day. Also flag a read of the host's default zone, and a test
+  that crosses midnight, a DST change, a month end or a leap day.
+- *Order.* An assertion on the iteration order of a hash map or set, on unsorted query
+  or listing results, or on JSON key order.
+- *Randomness.* An unseeded `Random`, `UUID`, `Math.random` or shuffle that reaches an
+  assertion.
+- *Concurrency.* A `sleep` used to wait for work, a timeout that a slow build host
+  exceeds, or a thread or future that the test does not join.
+- *Shared state.* A static, a singleton, an environment variable, a system property, or
+  a default locale or zone that the test changes and does not restore. A test that
+  passes only after another test.
+- *Environment.* A real network, AWS or file-system call. A host locale or path
+  separator.
+
+Example of the target finding: a test dated its S&OP waves through a helper outside the
+diff, `LocalDate.now(zone).plusDays(1)`. It set the service clock to 2026-10-09T17:00Z,
+but the method under test read the wall clock, so the fixed clock had no effect and the
+test passed. Five days later an unrelated change moved that method onto the injected
+clock. The service then planned from 10-09, the wave fell past the horizon, and the
+assertion read `null`. Flag a fixed clock beside a wall-clock fixture even when the
+code under test ignores the clock today.
+
+Write the trigger in `failure_scenario` as a date, zone, order or seed, for example
+"fails on any run seven days after 2026-10-09". The fix injects one clock, seed or order
+and derives every fixture value from it. Never fix a flaky test with a retry or a wider
+tolerance.
+Grounds: Fowler, "Eradicating Non-Determinism in Tests" (control the clock; isolate
+state); Google Testing Blog, "Flaky Tests at Google and How We Mitigate Them".
+
 ## Phase 2 — Dedup, then verify in batches (+ sweep, same wave)
 
 Dedup candidates that point at the same line or mechanism, keeping the one with the
@@ -295,7 +335,7 @@ on verify results.
 
 ```
 1. Split candidates into three pools:
-     correctness  = angles A-G
+     correctness  = angles A-G and L
      architecture = angle J
      craft        = angles H, I, K
    Correctness gets small batches (a wrong call ships a bug). Craft gets large
@@ -375,7 +415,7 @@ stream that hurts readability, an SRP split that fragments a cohesive unit), and
 the tradeoff. Write fixes with `final`/immutable locals.
 
 Report grouped by severity:
-- **Correctness** (A–E + sweep): what was wrong, what was fixed, what is PLAUSIBLE and
+- **Correctness** (A–E, L + sweep): what was wrong, what was fixed, what is PLAUSIBLE and
   awaits a judgment call.
 - **Architecture** (J): each decision for the owner as current → better, cost, switch
   now against later, confidence, and its example.
