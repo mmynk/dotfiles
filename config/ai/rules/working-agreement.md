@@ -3,9 +3,6 @@
 The order I work in, and the proof I must hold. Language rules live in `CLAUDE.md`.
 Project paths and gate commands live in that project's `AGENTS.md`.
 
-`~/.claude/wa-digest.sh` injects the phase lines this file implies on each prompt.
-`~/.claude/wa-gate.sh` injects the pre-review checklist. Edit this file first.
-
 ## Evidence
 
 This holds in every phase below.
