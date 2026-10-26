@@ -152,12 +152,27 @@ Guidance:
 - **Default to a table or ASCII** for terminal-read answers. They render inline with
   no dependencies. Reach for Mermaid when the relationships are graph- or
   sequence-shaped and a table would flatten them.
-- **Only write an HTML file** when the user wants something durable or shareable, or
-  the explanation needs interactivity or several diagrams together. Writing a file is
-  a side effect, so prefer inline unless durability is the point. Give the absolute
-  path when you do.
+- **Only write an HTML file** when the user or a calling skill wants something durable
+  or shareable, or the explanation needs interactivity or several diagrams together.
+  Writing a file is a side effect, so prefer inline unless durability is the point.
+  Give the absolute path when you do.
 - Prefer the *simplest* medium that carries the idea. A table beats a diagram beats an
   HTML page when all three would work.
+
+## Where to save an HTML file
+
+Save it in the docs folder of the project that the explanation is about. Not in `/tmp`.
+
+1. Use the folder that the project's `AGENTS.md` or `CLAUDE.md` names for explainers.
+2. Else walk up from the repo to the nearest `docs/explainers/`. A multi-repo workspace
+   often keeps one at its root, above the repos.
+3. Else ask the user once for the folder. Offer to record the answer in the project's
+   `AGENTS.md`, so the next call finds it at step 1.
+
+Put the file in a topic subfolder when the folder already has one that fits, or when
+an existing file covers the same topic. Do not move existing files. Name the file after
+the topic in kebab-case. Read a file before you overwrite it, and ask when it holds a
+different explanation.
 
 ## Structure, for problem and session scope
 
