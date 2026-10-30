@@ -1,0 +1,56 @@
+#!/bin/sh
+# Records which change an elevate pass reviewed, so a later step can skip a second pass.
+#
+#   mark record [base]   store the change's id in this worktree's git dir
+#   mark check  [base]   exit 0 when the stored id matches the change, 1 when it does not
+#
+# The change is the working tree against its merge base with the default branch (or base).
+# Untracked files count and ignored files do not. The id is a patch-id, so a rebase that
+# applies cleanly keeps it.
+
+set -eu
+
+usage() {
+    echo "usage: mark record|check [base]" >&2
+    exit 2
+}
+
+[ $# -ge 1 ] || usage
+action=$1
+base=${2:-}
+case "$action" in
+    record | check) ;;
+    *) usage ;;
+esac
+
+if [ -z "$base" ]; then
+    for ref in "$(git symbolic-ref -q --short refs/remotes/origin/HEAD || true)" origin/mainline origin/main; do
+        if [ -n "$ref" ] && git rev-parse -q --verify "$ref^{commit}" > /dev/null; then
+            base=$ref
+            break
+        fi
+    done
+fi
+if [ -z "$base" ]; then
+    echo "mark: no default branch found; pass a base" >&2
+    exit 2
+fi
+
+# A copy of the real index keeps its stat cache, so `git add -A` hashes only changed files,
+# and the real index stays untouched.
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+cp "$(git rev-parse --git-path index)" "$tmp/index"
+GIT_INDEX_FILE="$tmp/index" git add -A
+id=$(GIT_INDEX_FILE="$tmp/index" git diff --cached "$(git merge-base "$base" HEAD)" | git patch-id --stable | cut -d' ' -f1)
+if [ -z "$id" ]; then
+    echo "mark: no change against $base" >&2
+    exit 1
+fi
+
+marker="$(git rev-parse --absolute-git-dir)/elevate-patch-id"
+if [ "$action" = record ]; then
+    echo "$id" > "$marker"
+else
+    [ "$id" = "$(cat "$marker" 2> /dev/null || true)" ]
+fi

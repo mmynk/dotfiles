@@ -33,6 +33,8 @@ Get the change under review:
   (`main` or `mainline`), then `git diff HEAD~1`.
 - Also `git diff HEAD` when there are uncommitted changes or the range is empty.
 - If a PR number, branch, or path was passed as an argument, review that instead.
+- If the argument is the root of a repo or a worktree, review its change as above, and
+  run every git command there with `git -C <dir>`.
 
 If the diff only touches comments/docs/renames/formatting with no runtime surface, say
 so and stop. There is nothing to elevate. One exception: when the argument is a design
@@ -433,3 +435,8 @@ brief had a system section. Name the files you read one hop outside the diff. If
 read none, say so, because the review then covered only the changed lines. If the
 change was already clean at this bar, say that plainly rather than inventing work.
 Delete the brief file.
+
+After a review of code (not of a design brief), record the change in the repo you reviewed:
+`env -C <repo> ~/.claude/skills/elevate/mark record`. A later step runs `mark check` and skips
+a second pass when the change is the same. Record after the fixes are applied, so the id
+matches what the next step commits.
